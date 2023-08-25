@@ -13,19 +13,24 @@ from .serializers import (
 from datetime import datetime
 
 
+item_map = dict(job=Job, story=Story, comment=Comment, askstory=AskStory, poll=Poll)
+
+serializer_map = dict(
+    job=JobSerializer,
+    story=StorySerializer,
+    comment=CommentSerializer,
+    askstory=AskStorySerializer,
+    poll=PollSerializer,
+)
+
+
 class GenericNewsAPIView(generics.ListCreateAPIView):
 
     lookup_url_kwarg = "item_type"
 
-    item_map = dict(job=Job, story=Story, comment=Comment, askstory=AskStory, poll=Poll)
+    item_map = item_map
 
-    serializer_map = dict(
-        job=JobSerializer,
-        story=StorySerializer,
-        comment=CommentSerializer,
-        askstory=AskStorySerializer,
-        poll=PollSerializer,
-    )
+    serializer_map = serializer_map
 
     def get_queryset(self):
         item_type = self.kwargs[self.lookup_url_kwarg]
@@ -115,14 +120,9 @@ class GenericNewsAPIView(generics.ListCreateAPIView):
 
 
 class ParentCommentAPIView(APIView):
-    item_map = dict(job=Job, story=Story, askstory=AskStory, poll=Poll)
+    item_map = item_map
 
-    serializer_map = dict(
-        job=JobSerializer,
-        story=StorySerializer,
-        askstory=AskStorySerializer,
-        poll=PollSerializer,
-    )
+    serializer_map = serializer_map
 
     def get(self, request, parent_name, parent_id, format=None):
 
@@ -193,3 +193,45 @@ class ParentCommentAPIView(APIView):
                 CommentSerializer(new_comment).data, status=status.HTTP_201_CREATED
             )
         return Response(serialize_comment.errors, status.HTTP_400_BAD_REQUEST)
+
+
+class LatestNewsListAPIView(APIView):
+
+    item_map = item_map
+    serializer_map = serializer_map
+    filter_name = "news_type"
+
+    def get(self, request, format=None):
+        if request.query_params:
+            params = request.query_params.get(self.filter_name)
+            if not params:
+                return Response([])
+            params = params.split(",")
+            items_filtered = []
+            for item_name, item_class in item_map.items():
+                if item_name != "comment" and item_name in params:
+                    items_filtered.extend(
+                        self.serializer_map[item_name](
+                            item_class.objects.all(), many=True
+                        ).data
+                    )
+            items_filtered.sort(
+                key=lambda x: -(
+                    datetime.strptime(x["created_at"], "%Y-%m-%dT%H:%M:%S.%fZ").timestamp()
+                )
+            )
+            return Response(items_filtered, status=status.HTTP_200_OK)
+
+        all_data = []
+
+        for item_name, item_class in self.item_map.items():
+            if item_name != "comment":
+                this_items = item_class.objects.all()
+                this_serialized = self.serializer_map[item_name](this_items, many=True)
+                all_data.extend(this_serialized.data)
+        all_data.sort(
+            key=lambda x: -(
+                datetime.strptime(x["created_at"], "%Y-%m-%dT%H:%M:%S.%fZ").timestamp()
+            )
+        )
+        return Response(all_data, status=status.HTTP_200_OK)
