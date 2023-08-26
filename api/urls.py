@@ -3,7 +3,7 @@ from .views import GenericNewsAPIView, ParentCommentAPIView, LatestNewsListAPIVi
 
 urlpatterns = [
     path("latest/", LatestNewsListAPIView.as_view(), name="latest"),
-    path("<slug:item_type>/", GenericNewsAPIView.as_view(), name="news"),
+    path("<slug:news_type>/", GenericNewsAPIView.as_view(), name="news"),
     path(
         "<slug:parent_name>/<int:parent_id>/comment/",
         ParentCommentAPIView.as_view(),

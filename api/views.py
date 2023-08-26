@@ -11,6 +11,7 @@ from .serializers import (
     AskStorySerializer,
 )
 from datetime import datetime
+from .utility import tokenize
 
 
 item_map = dict(job=Job, story=Story, comment=Comment, askstory=AskStory, poll=Poll)
@@ -26,7 +27,7 @@ serializer_map = dict(
 
 class GenericNewsAPIView(generics.ListCreateAPIView):
 
-    lookup_url_kwarg = "item_type"
+    lookup_url_kwarg = "news_type"
 
     item_map = item_map
 
@@ -200,30 +201,65 @@ class LatestNewsListAPIView(APIView):
     item_map = item_map
     serializer_map = serializer_map
     filter_name = "news_type"
+    search_name = "search"
 
     def get(self, request, format=None):
         if request.query_params:
             params = request.query_params.get(self.filter_name)
-            if not params:
+            search = request.query_params.get(self.search_name)
+
+            if not params and not search:
                 return Response([])
-            params = params.split(",")
-            items_filtered = []
-            for item_name, item_class in item_map.items():
-                if item_name != "comment" and item_name in params:
-                    items_filtered.extend(
-                        self.serializer_map[item_name](
-                            item_class.objects.all(), many=True
-                        ).data
-                    )
-            items_filtered.sort(
-                key=lambda x: -(
-                    datetime.strptime(x["created_at"], "%Y-%m-%dT%H:%M:%S.%fZ").timestamp()
-                )
-            )
-            return Response(items_filtered, status=status.HTTP_200_OK)
+            else:
+                items_filtered = []
+                if params:
+                    params = params.split(",")
+                    for item_name, item_class in item_map.items():
+                        if item_name != "comment" and item_name in params:
+                            items_filtered.extend(
+                                self.serializer_map[item_name](
+                                    item_class.objects.all(), many=True
+                                ).data
+                            )
+                if items_filtered:  # this confirms that there is params
+                    search_items = []
+                    if not search:
+                        return Response(items_filtered, status=status.HTTP_200_OK)
+                    token = tokenize(search)
+
+                    for filtered in items_filtered:
+                        text = filtered.get("text", "")
+                        title = filtered.get("title", "")
+                        text_and_title = text.lower() + " " + title.lower()
+                        if any(
+                            ((tok.find(text_and_title) + text_and_title.find(tok)) > -2)
+                            for tok in token
+                        ):
+                            search_items.append(filtered)
+                    return Response(search_items, status=status.HTTP_200_OK)
+                elif search:
+                    search_items = []
+                    token = tokenize(search)
+                    for item_name, item_class in item_map.items():
+                        if item_name != "comment":
+                            items_filtered.extend(
+                                self.serializer_map[item_name](
+                                    item_class.objects.all(), many=True
+                                ).data
+                            )
+                    for filtered in items_filtered:
+                        text = filtered.get("text", "")
+                        title = filtered.get("title", "")
+                        text_and_title = text.lower() + " " + title.lower()
+
+                        if any(
+                            ((tok.find(text_and_title) + text_and_title.find(tok)) > -2)
+                            for tok in token
+                        ):
+                            search_items.append(filtered)
+                    return Response(search_items, status=status.HTTP_200_OK)
 
         all_data = []
-
         for item_name, item_class in self.item_map.items():
             if item_name != "comment":
                 this_items = item_class.objects.all()
