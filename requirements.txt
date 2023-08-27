@@ -3,3 +3,5 @@ python-dotenv
 django-filter
 djangorestframework
 markdown
+django-cors-headers
+django-rest-multiple-models

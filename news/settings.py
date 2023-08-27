@@ -43,11 +43,14 @@ INSTALLED_APPS = [
     "rest_framework",
     "api",
     "django_cron",
+    "corsheaders",
+    "drf_multiple_model",
 ]
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -79,8 +82,13 @@ WSGI_APPLICATION = "news.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
+CORS_ALLOW_ALL_ORIGINS = False
+
+CORS_ALLOWED_ORIGINS = ["http://localhost:3000", "http://127.0.0.1:3000"]
 if DEBUG:
     ALLOWED_HOSTS = []
+    SESSION_COOKIE_SECURE = False
+    # CSRF_COOKIE_SECURE = False
 
     DATABASES = {
         "default": {
@@ -103,7 +111,7 @@ else:
     CSRF_COOKIE_SECURE = True
     SESSION_COOKIE_SECURE = True
 
-    ALLOWED_HOSTS = []
+    ALLOWED_HOSTS = ["*"]
 
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators

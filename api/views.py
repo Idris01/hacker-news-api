@@ -1,7 +1,10 @@
 from rest_framework.views import APIView
 from rest_framework import generics, status
 from rest_framework.response import Response
+from rest_framework import filters
 from rest_framework.validators import DataError
+from drf_multiple_model.views import FlatMultipleModelAPIView
+from drf_multiple_model.pagination import MultipleModelLimitOffsetPagination
 from app.models import Story, Comment, Poll, AskStory, Job
 from .serializers import (
     StorySerializer,
@@ -23,6 +26,44 @@ serializer_map = dict(
     askstory=AskStorySerializer,
     poll=PollSerializer,
 )
+
+
+class LimitPagination(MultipleModelLimitOffsetPagination):
+    default_limit = 20
+
+
+class LatestNewsListAPIView(FlatMultipleModelAPIView):
+    add_model_type = False
+    sorting_field = "-created_at"
+    search_fields = ("title",)
+    filter_backends = (filters.SearchFilter,)
+    pagination_class = LimitPagination
+    news_query_map = [
+        {
+            "queryset": Story.objects.all(),
+            "serializer_class": StorySerializer,
+            "label": "story",
+        },
+        {
+            "queryset": AskStory.objects.all(),
+            "serializer_class": AskStorySerializer,
+            "label": "askstory",
+        },
+        {"queryset": Job.objects.all(), "serializer_class": JobSerializer, "label": "job"},
+        {
+            "queryset": Poll.objects.all(),
+            "serializer_class": PollSerializer,
+            "label": "poll",
+        },
+    ]
+
+    def get_querylist(self):
+        filters = self.request.query_params.get("news_type", "").strip().split(",")
+
+        if filters[0] != "":
+            return [item for item in self.news_query_map if item["label"] in filters]
+
+        return self.news_query_map
 
 
 class GenericNewsAPIView(generics.ListCreateAPIView):
@@ -196,7 +237,7 @@ class ParentCommentAPIView(APIView):
         return Response(serialize_comment.errors, status.HTTP_400_BAD_REQUEST)
 
 
-class LatestNewsListAPIView(APIView):
+class NewsListAPIView(APIView):
 
     item_map = item_map
     serializer_map = serializer_map
