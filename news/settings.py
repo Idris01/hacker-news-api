@@ -84,7 +84,17 @@ WSGI_APPLICATION = "news.wsgi.application"
 
 CORS_ALLOW_ALL_ORIGINS = False
 
-CORS_ALLOWED_ORIGINS = ["http://localhost:3000", "http://127.0.0.1:3000"]
+CORS_ALLOWED_ORIGINS = (
+    []
+    if os.getenv("CORS_ALLOWED_ORIGINS") is None
+    else os.getenv("CORS_ALLOWED_ORIGINS").split(",")
+)
+
+ALLOWED_HOSTS = (
+    [] if os.getenv("ALLOWED_HOSTS") is None else os.getenv("ALLOWED_HOSTS").split(",")
+)
+
+
 if DEBUG:
     ALLOWED_HOSTS = []
     SESSION_COOKIE_SECURE = False
@@ -111,7 +121,6 @@ else:
     CSRF_COOKIE_SECURE = True
     SESSION_COOKIE_SECURE = True
 
-    ALLOWED_HOSTS = ["*"]
 
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
@@ -163,7 +172,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
 STATIC_URL = "static/"
-
+STATIC_ROOT = "static/"
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 

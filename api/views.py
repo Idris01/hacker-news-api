@@ -312,3 +312,27 @@ class NewsListAPIView(APIView):
             )
         )
         return Response(all_data, status=status.HTTP_200_OK)
+
+
+class StoryRetrieveAPIView(generics.RetrieveAPIView):
+    lookup_field = "id"
+    serializer_class = StorySerializer
+    queryset = Story.objects.all()
+
+
+class AskStoryRetrieveAPIView(generics.RetrieveAPIView):
+    lookup_field = "id"
+    serializer_class = AskStorySerializer
+    queryset = AskStory.objects.all()
+
+
+class PollRetrieveAPIView(generics.RetrieveAPIView):
+    lookup_field = "id"
+    serializer_class = PollSerializer
+    queryset = Poll.objects.all()
+
+
+class JobRetrieveAPIView(generics.RetrieveAPIView):
+    lookup_field = "id"
+    serializer_class = JobSerializer
+    queryset = Job.objects.all()
